@@ -1,0 +1,115 @@
+/* ─── Alert History ─────────────────────────────────────────── */
+.alert-panel {
+    max-height: 580px;
+    display: flex;
+    flex-direction: column;
+}
+
+.alert-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.alert-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 6px;
+    background: rgba(255, 82, 82, 0.04);
+    border: 1px solid rgba(255, 82, 82, 0.1);
+    transition: var(--transition-normal);
+    animation: slide-in 0.35s ease;
+}
+
+.alert-item:hover {
+    background: rgba(255, 82, 82, 0.08);
+    border-color: rgba(255, 82, 82, 0.2);
+}
+
+.alert-item.resolved {
+    background: rgba(102, 187, 106, 0.05);
+    border-color: rgba(102, 187, 106, 0.2);
+}
+
+.alert-item.resolved .alert-dot {
+    background: var(--color-offline);
+    box-shadow: none;
+    animation: none;
+}
+
+.alert-item.dismissed {
+    opacity: 0.6;
+    background: transparent;
+    border-color: var(--border);
+}
+
+.alert-item.dismissed .alert-dot {
+    background: var(--text-muted);
+    box-shadow: none;
+    animation: none;
+}
+
+.alert-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--color-fall);
+    box-shadow: 0 0 8px var(--color-fall-glow);
+    flex-shrink: 0;
+    margin-top: 4px;
+    animation: pulse-red 2s infinite;
+}
+
+.alert-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.alert-device {
+    font-weight: 600;
+    font-size: 0.88rem;
+    margin-bottom: 2px;
+}
+
+.alert-message {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+}
+
+.alert-time {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    opacity: 0.7;
+}
+
+.alert-actions {
+    flex-shrink: 0;
+    display: flex;
+    gap: 6px;
+}
+
+.alert-status-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    opacity: 0.8;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.alert-status-resolved {
+    color: var(--color-success);
+}
+
+.alert-status-dismissed {
+    color: var(--text-muted);
+}
+
+.alert-count-active {
+    background: rgba(255, 82, 82, 0.12);
+    border-color: rgba(255, 82, 82, 0.25);
+    color: #ff5252;
+}

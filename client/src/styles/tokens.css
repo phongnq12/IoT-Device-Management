@@ -1,0 +1,49 @@
+/* ═══════════════════════════════════════════════════════════════
+   IoT Monitor — Design Tokens
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+    --bg-base: #060e1a;
+    --bg-surface: #0a1929;
+    --bg-card: #132f4c;
+    --bg-card-hover: #173a5e;
+    --bg-elevated: #1a3f63;
+    --bg-input: #0d2137;
+
+    --text-primary: #e3f2fd;
+    --text-secondary: #90caf9;
+    --text-muted: #5c7fa3;
+    --text-inverse: #0a1929;
+
+    --accent: #4dd0e1;
+    --accent-hover: #26c6da;
+    --accent-glow: rgba(77, 208, 225, 0.25);
+
+    --color-online: #66bb6a;
+    --color-online-glow: rgba(102, 187, 106, 0.35);
+    --color-offline: #78909c;
+    --color-person: #7c4dff;
+    --color-person-glow: rgba(124, 77, 255, 0.3);
+    --color-fall: #ff5252;
+    --color-fall-glow: rgba(255, 82, 82, 0.35);
+    --color-warning: #ffa726;
+    --color-success: #66bb6a;
+
+    --border: rgba(144, 202, 249, 0.08);
+    --border-focus: rgba(77, 208, 225, 0.5);
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 20px var(--accent-glow);
+
+    --navbar-height: 64px;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 20px;
+
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}

@@ -1,0 +1,227 @@
+/* ─── Buttons ───────────────────────────────────────────────── */
+.btn-icon {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: rgba(19, 47, 76, 0.5);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: var(--transition-normal);
+}
+
+.btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-icon:hover {
+    background: var(--bg-card);
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--shadow-glow);
+    transform: translateY(-1px);
+}
+
+.btn {
+    padding: 10px 22px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition-normal);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-pair {
+    background: linear-gradient(135deg, var(--accent) 0%, #00838f 100%);
+    color: var(--text-inverse);
+    box-shadow: 0 2px 12px var(--accent-glow);
+    padding: 8px 18px;
+    font-size: 0.85rem;
+}
+
+.btn-pair:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.btn-pair-icon {
+    width: 16px;
+    height: 16px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--accent) 0%, #00838f 100%);
+    color: var(--text-inverse);
+    box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px var(--accent-glow);
+}
+
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-secondary {
+    background: transparent;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+    border-color: var(--text-secondary);
+    background: rgba(144, 202, 249, 0.05);
+}
+
+.btn-danger-sm {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(255, 82, 82, 0.1);
+    color: var(--color-fall);
+    border: 1px solid rgba(255, 82, 82, 0.2);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.btn-danger-sm:hover {
+    background: rgba(255, 82, 82, 0.2);
+    border-color: rgba(255, 82, 82, 0.4);
+}
+
+.btn-danger {
+    padding: 10px 22px;
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--color-fall);
+    transition: var(--transition-normal);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-fall);
+    color: white;
+    margin-left: 10px;
+}
+
+.btn-danger:hover {
+    background: #ff1744;
+    transform: translateY(-1px);
+}
+
+.btn-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(144, 202, 249, 0.06);
+    color: var(--text-muted);
+    font-size: 1.3rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition-fast);
+}
+
+.btn-close:hover {
+    background: rgba(255, 82, 82, 0.15);
+    color: var(--color-fall);
+}
+
+.btn-copy,
+.btn-copy-sm {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: rgba(19, 47, 76, 0.5);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.btn-copy svg {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-copy:hover,
+.btn-copy-sm:hover {
+    background: var(--accent);
+    color: var(--text-inverse);
+    border-color: var(--accent);
+}
+
+.btn-copy.copied,
+.btn-copy-sm.copied {
+    background: var(--color-success);
+    border-color: var(--color-success);
+    color: white;
+}
+
+.btn-copy-sm {
+    width: 26px;
+    height: 26px;
+    font-size: 0.75rem;
+    border: none;
+    background: transparent;
+}
+
+.btn-resolve {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(102, 187, 106, 0.1);
+    color: var(--color-success);
+    border: 1px solid rgba(102, 187, 106, 0.2);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.btn-resolve:hover {
+    background: rgba(102, 187, 106, 0.2);
+    border-color: rgba(102, 187, 106, 0.4);
+}
+
+.btn-dismiss {
+    padding: 4px 10px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(120, 144, 156, 0.1);
+    color: var(--text-muted);
+    border: 1px solid rgba(120, 144, 156, 0.2);
+    cursor: pointer;
+    transition: var(--transition-fast);
+    font-family: inherit;
+}
+
+.btn-dismiss:hover {
+    background: rgba(255, 82, 82, 0.15);
+    color: var(--color-fall);
+    border-color: rgba(255, 82, 82, 0.3);
+}

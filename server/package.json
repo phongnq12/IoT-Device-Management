@@ -1,0 +1,21 @@
+{
+    "name": "iot-dashboard-server",
+    "version": "1.0.0",
+    "description": "IoT Dashboard Backend - Express + MQTT + WebSocket",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "node server.js",
+        "test": "vitest run",
+        "test:watch": "vitest"
+    },
+    "dependencies": {
+        "aedes": "^0.51.3",
+        "cors": "^2.8.5",
+        "express": "^4.18.2",
+        "ws": "^8.16.0"
+    },
+    "devDependencies": {
+        "vitest": "^4.0.18"
+    }
+}
