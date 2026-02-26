@@ -1,60 +1,65 @@
-const { MAX_ALERTS } = require('./config');
-const { getDeviceOrCreate, alertHistory, deviceIdToSerial, devices } = require('./store');
-const { broadcastToClients } = require('./ws-handler');
+const { ref, set, update, get, child } = require('firebase/database');
+const { db } = require('./firebase');
 
-// ─── DRY: Shared alert creation ────────────────────────────────
-function createAlert({ deviceId, serialNumber, type, stage, message, exitReason }) {
+const deviceIdToSerial = new Map();
+
+async function createAlert({ deviceId, serialNumber, type, stage, message, exitReason }) {
+    const alertId = `alert-${Date.now()}-${deviceId}`;
     const alertEntry = {
-        id: `alert-${Date.now()}-${deviceId}`,
         deviceId,
         serialNumber: serialNumber || null,
         type,
         stage: stage || null,
         message,
         exitReason: exitReason || null,
-        timestamp: new Date().toISOString(),
+        timestamp: Date.now(),
         resolved: false,
         dismissed: false,
     };
-    alertHistory.unshift(alertEntry);
-    if (alertHistory.length > MAX_ALERTS) alertHistory.pop();
-    broadcastToClients('new_alert', alertEntry);
+
+    const alertRef = ref(db, `alerts/${alertId}`);
+    await set(alertRef, alertEntry);
     return alertEntry;
 }
 
 // ─── Event Processors ──────────────────────────────────────────
-function handlePresenceEvent(device, eventPayload, deviceId, now) {
-    device.personDetected = eventPayload.presenceDetected === true;
-    device.lastPersonEvent = now;
+async function handlePresenceEvent(deviceRef, deviceData, eventPayload, deviceId, now) {
+    const updates = {
+        personDetected: eventPayload.presenceDetected === true,
+        lastPersonEvent: now,
+    };
     if (eventPayload.trackerTargets) {
-        device.presenceDetails = eventPayload.trackerTargets;
+        updates.presenceDetails = eventPayload.trackerTargets;
     }
-    console.log(`[Device ${deviceId}] Presence: ${device.personDetected}`);
+    await update(deviceRef, updates);
+    console.log(`[Device ${deviceId}] Presence: ${updates.personDetected}`);
 }
 
-function handleFallEvent(device, eventPayload, deviceId, now) {
+async function handleFallEvent(deviceRef, deviceData, eventPayload, deviceId, now) {
     const fallStatus = eventPayload.status;
-    device.lastFallEvent = now;
+    const updates = { lastFallEvent: now };
 
     const activeFallStages = ['fall_detected', 'fall_confirmed', 'calling'];
     if (activeFallStages.includes(fallStatus)) {
-        device.fallStage = fallStatus;
-        device.fallAlert = true;
+        updates.fallStage = fallStatus;
+        updates.fallAlert = true;
     }
 
     if (fallStatus === 'fall_exit') {
-        device.fallAlert = false;
-        device.fallStage = null;
+        updates.fallAlert = false;
+        updates.fallStage = null;
     }
 
+    await update(deviceRef, updates);
+
     if (fallStatus === 'calling') {
-        const displayName = device.serialNumber || deviceId;
+        const displayName = deviceData.serialNumber || deviceId;
         const location = eventPayload.fallLocX_cm != null
             ? ` at (${eventPayload.fallLocX_cm}, ${eventPayload.fallLocY_cm}, ${eventPayload.fallLocZ_cm})cm`
             : '';
-        createAlert({
+        await createAlert({
             deviceId,
-            serialNumber: device.serialNumber,
+            serialNumber: deviceData.serialNumber,
             type: 'fall',
             stage: fallStatus,
             message: `Fall Detected on ${displayName}${location}`,
@@ -66,20 +71,22 @@ function handleFallEvent(device, eventPayload, deviceId, now) {
     }
 }
 
-function handleTargetOnGround(device, eventPayload, deviceId, now) {
-    device.fallSuspected = true;
-    device.fallStage = eventPayload.status || 'fall_suspected';
-    device.lastFallEvent = now;
+async function handleTargetOnGround(deviceRef, deviceData, eventPayload, deviceId, now) {
+    const updates = {
+        fallSuspected: true,
+        fallStage: eventPayload.status || 'fall_suspected',
+        lastFallEvent: now,
+    };
 
     const counter = eventPayload.suspectedEventsCounter || 0;
     const confidence = eventPayload.confidenceLevel || 0;
 
     if (eventPayload.status === 'calling') {
-        device.fallAlert = true;
-        const displayName = device.serialNumber || deviceId;
-        createAlert({
+        updates.fallAlert = true;
+        const displayName = deviceData.serialNumber || deviceId;
+        await createAlert({
             deviceId,
-            serialNumber: device.serialNumber,
+            serialNumber: deviceData.serialNumber,
             type: 'target_on_ground',
             stage: 'calling',
             message: `Target on ground → Calling stage on ${displayName} (${counter} suspected events, confidence: ${confidence})`,
@@ -88,10 +95,11 @@ function handleTargetOnGround(device, eventPayload, deviceId, now) {
     } else {
         console.log(`[Device ${deviceId}] Target on ground: suspected #${counter} (confidence: ${confidence})`);
     }
+    await update(deviceRef, updates);
 }
 
 // ─── Main MQTT Message Handler ─────────────────────────────────
-function handleMQTTMessage(topic, payload, clientId) {
+async function handleMQTTMessage(topic, payload, clientId) {
     const cleanTopic = topic.startsWith('/') ? topic.substring(1) : topic;
     const parts = cleanTopic.split('/');
 
@@ -105,32 +113,42 @@ function handleMQTTMessage(topic, payload, clientId) {
         topicType = parts[parts.length - 1];
     }
 
-    const device = getDeviceOrCreate(deviceId);
-    const now = new Date().toISOString();
-    device.lastSeen = now;
+    const now = Date.now();
+    const deviceRef = ref(db, `devices/${deviceId}`);
+
+    // Get existing device data to conditionally update and read serialNumber
+    const snapshot = await get(deviceRef);
+    let deviceData = snapshot.exists() ? snapshot.val() : {};
+
+    // Always update lastSeen
+    await update(deviceRef, { lastSeen: now });
 
     switch (topicType) {
         case 'state': {
-            device.status = 'online';
-            device.deviceState = payload.status || null;
+            const updates = {
+                status: 'online',
+                deviceState: payload.status || null,
+            };
 
             if (payload.serialProduct) {
                 deviceIdToSerial.set(deviceId, payload.serialProduct);
-                device.serialNumber = payload.serialProduct;
+                updates.serialNumber = payload.serialProduct;
+                deviceData.serialNumber = payload.serialProduct;
                 console.log(`[Mapping] ${deviceId} → Serial: ${payload.serialProduct}`);
             }
 
-            if (payload.temperature != null) device.temperature = payload.temperature;
-            if (payload.memoryUsage != null) device.memoryUsage = payload.memoryUsage;
-            if (payload.model) device.model = payload.model;
-            if (payload.versionName) device.firmwareVersion = payload.versionName;
+            if (payload.temperature != null) updates.temperature = payload.temperature;
+            if (payload.memoryUsage != null) updates.memoryUsage = payload.memoryUsage;
+            if (payload.model) updates.model = payload.model;
+            if (payload.versionName) updates.firmwareVersion = payload.versionName;
             if (payload.wifiState) {
-                device.wifiRSSI = payload.wifiState.rssi || null;
-                device.wifiSSID = payload.wifiState.ssid || null;
+                updates.wifiRSSI = payload.wifiState.rssi || null;
+                updates.wifiSSID = payload.wifiState.ssid || null;
             }
 
-            const displayName = device.serialNumber || deviceId;
-            console.log(`[Device ${displayName}] State: ${device.deviceState} | Temp: ${device.temperature}°F | WiFi: ${device.wifiRSSI}dBm`);
+            await update(deviceRef, updates);
+            const displayName = updates.serialNumber || deviceId;
+            console.log(`[Device ${displayName}] State: ${updates.deviceState} | Temp: ${updates.temperature}°F | WiFi: ${updates.wifiRSSI}dBm`);
             break;
         }
 
@@ -138,22 +156,23 @@ function handleMQTTMessage(topic, payload, clientId) {
             const eventPayload = payload.payload || payload;
             const eventType = payload.type || eventPayload.type;
 
-            if (!device.serialNumber && deviceIdToSerial.has(deviceId)) {
-                device.serialNumber = deviceIdToSerial.get(deviceId);
+            if (!deviceData.serialNumber && deviceIdToSerial.has(deviceId)) {
+                deviceData.serialNumber = deviceIdToSerial.get(deviceId);
+                await update(deviceRef, { serialNumber: deviceData.serialNumber });
             }
 
             switch (eventType) {
                 case 4:
                 case 'presence':
-                    handlePresenceEvent(device, eventPayload, deviceId, now);
+                    await handlePresenceEvent(deviceRef, deviceData, eventPayload, deviceId, now);
                     break;
                 case 5:
                 case 'fall':
-                    handleFallEvent(device, eventPayload, deviceId, now);
+                    await handleFallEvent(deviceRef, deviceData, eventPayload, deviceId, now);
                     break;
                 case 8:
                 case 'target_on_ground':
-                    handleTargetOnGround(device, eventPayload, deviceId, now);
+                    await handleTargetOnGround(deviceRef, deviceData, eventPayload, deviceId, now);
                     break;
                 default:
                     console.log(`[Device ${deviceId}] Unknown event type ${eventType}:`, eventPayload);
@@ -163,24 +182,30 @@ function handleMQTTMessage(topic, payload, clientId) {
 
         // Legacy topic support
         case 'status':
-            device.status = payload.status || 'unknown';
-            console.log(`[Device ${deviceId}] Legacy status: ${device.status}`);
+            await update(deviceRef, { status: payload.status || 'unknown' });
+            console.log(`[Device ${deviceId}] Legacy status: ${payload.status}`);
             break;
 
         case 'person':
-            device.personDetected = payload.detected === true;
-            device.lastPersonEvent = now;
-            console.log(`[Device ${deviceId}] Legacy person: ${device.personDetected}`);
+            const personDetected = payload.detected === true;
+            await update(deviceRef, {
+                personDetected,
+                lastPersonEvent: now
+            });
+            console.log(`[Device ${deviceId}] Legacy person: ${personDetected}`);
             break;
 
         case 'fall':
-            device.fallAlert = payload.alert === true;
-            device.lastFallEvent = now;
-            if (payload.alert) {
-                const displayName = device.serialNumber || deviceId;
-                createAlert({
+            const fallAlert = payload.alert === true;
+            await update(deviceRef, {
+                fallAlert,
+                lastFallEvent: now
+            });
+            if (fallAlert) {
+                const displayName = deviceData.serialNumber || deviceId;
+                await createAlert({
                     deviceId,
-                    serialNumber: device.serialNumber,
+                    serialNumber: deviceData.serialNumber,
                     type: 'fall',
                     message: `Fall detected on ${displayName}`,
                 });
@@ -189,10 +214,8 @@ function handleMQTTMessage(topic, payload, clientId) {
             break;
 
         default:
-            console.log(`[Device ${deviceId}] Message on topic "${topic}":`, payload);
+            console.log(`[Device ${deviceId}] Non-standard message on topic "${topic}"`);
     }
-
-    broadcastToClients('device_update', device);
 }
 
 module.exports = { handleMQTTMessage, createAlert };

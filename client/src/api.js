@@ -1,41 +1,53 @@
-const API_BASE = '/api';
+import { ref, remove, update, set } from 'firebase/database';
+import { db } from './firebase';
 
-async function fetchJSON(url, options = {}) {
-    const res = await fetch(`${API_BASE}${url}`, {
-        headers: { 'Content-Type': 'application/json' },
-        ...options,
+export async function getDevices() {
+    // Replaced by useFirebaseDatabase listener
+    return [];
+}
+
+export async function getDevice(id) {
+    // Handled by realtime listener
+    return null;
+}
+
+export async function unpairDevice(id) {
+    const deviceRef = ref(db, `devices/${id}`);
+    await remove(deviceRef);
+}
+
+export async function getBrokerInfo() {
+    return { ip: 'Firebase', port: '443', running: true, connectedClients: 1 };
+}
+
+export async function resolveAlert(id) {
+    const alertRef = ref(db, `alerts/${id}`);
+    await update(alertRef, { resolved: true });
+}
+
+export async function dismissAlert(id) {
+    const alertRef = ref(db, `alerts/${id}`);
+    await update(alertRef, { dismissed: true });
+}
+
+export async function simulateData() {
+    // Generate some mock data on Firebase directly to test UI
+    const mockDeviceId = 'dev-sim-' + Math.floor(Math.random() * 1000);
+    const mockDeviceRef = ref(db, `devices/${mockDeviceId}`);
+    await set(mockDeviceRef, {
+        displayName: 'Simulated Sensor',
+        state: 'online',
+        temperature: 72 + Math.random() * 5,
+        wifiSignal: -50,
+        lastSeen: Date.now()
     });
-    if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || res.statusText);
-    }
-    return res.json();
-}
 
-export function getDevices() {
-    return fetchJSON('/devices');
-}
-
-export function getDevice(id) {
-    return fetchJSON(`/devices/${id}`);
-}
-
-export function unpairDevice(id) {
-    return fetchJSON(`/devices/${id}`, { method: 'DELETE' });
-}
-
-export function getBrokerInfo() {
-    return fetchJSON('/broker/info');
-}
-
-export function resolveAlert(id) {
-    return fetchJSON(`/alerts/${id}/resolve`, { method: 'POST' });
-}
-
-export function dismissAlert(id) {
-    return fetchJSON(`/alerts/${id}/dismiss`, { method: 'POST' });
-}
-
-export function simulateData() {
-    return fetchJSON('/simulate', { method: 'POST' });
+    const mockAlertRef = ref(db, `alerts/alert-${Date.now()}`);
+    await set(mockAlertRef, {
+        deviceId: mockDeviceId,
+        message: 'Simulated Fall Detected!',
+        resolved: false,
+        dismissed: false,
+        timestamp: Date.now()
+    });
 }
