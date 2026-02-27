@@ -40,9 +40,21 @@ export function useFirebaseDatabase() {
             }
         });
 
+        // Listen to broker status
+        const brokerRef = ref(db, 'broker');
+        const unsubBroker = onValue(brokerRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                setBroker(data);
+            } else {
+                setBroker({ ip: 'Waiting for Bridge...', port: '—', running: false, connectedClients: 0 });
+            }
+        });
+
         return () => {
             unsubDevices();
             unsubAlerts();
+            unsubBroker();
         };
     }, []);
 

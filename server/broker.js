@@ -1,60 +1,39 @@
 const net = require('net');
 const Aedes = require('aedes');
-const { INITIAL_MQTT_PORT } = require('./config');
 const { getLocalIP } = require('./utils');
-const { devices, blockedDevices, getDeviceOrCreate } = require('./store');
-const { broadcastToClients } = require('./ws-handler');
+const { ref, set } = require('firebase/database');
+const { db } = require('./firebase');
 
 const aedes = Aedes();
 const mqttServer = net.createServer(aedes.handle);
 
-let brokerConfig = { port: INITIAL_MQTT_PORT, running: false, connectedClients: 0 };
+let brokerConfig = { port: 1883, running: false, connectedClients: 0 };
 
-function getBrokerStatus() {
-    const onlineCount = Array.from(devices.values()).filter(d => d.status === 'online').length;
-    return {
+function updateBrokerStatus() {
+    const status = {
         ip: getLocalIP(),
         port: brokerConfig.port,
         running: brokerConfig.running,
-        connectedClients: onlineCount,
+        connectedClients: brokerConfig.connectedClients
     };
+    set(ref(db, 'broker'), status).catch(err => console.error('[MQTT Broker] Failed to sync status:', err.message));
 }
 
 function setupBrokerEvents(handleMQTTMessage) {
     aedes.on('client', (client) => {
         console.log(`[MQTT Broker] Client connected: ${client.id}`);
         brokerConfig.connectedClients++;
-
-        if (blockedDevices.has(client.id)) {
-            console.log(`[MQTT Broker] Blocked device reconnected: ${client.id} — closing`);
-            client.close();
-            return;
-        }
-
-        const device = getDeviceOrCreate(client.id);
-        device.status = 'online';
-        device.lastSeen = new Date().toISOString();
-
-        broadcastToClients('device_update', device);
-        broadcastToClients('broker_status', getBrokerStatus());
+        updateBrokerStatus();
     });
 
     aedes.on('clientDisconnect', (client) => {
         console.log(`[MQTT Broker] Client disconnected: ${client.id}`);
         brokerConfig.connectedClients = Math.max(0, brokerConfig.connectedClients - 1);
-
-        const device = devices.get(client.id);
-        if (device) {
-            device.status = 'offline';
-            device.lastSeen = new Date().toISOString();
-            broadcastToClients('device_update', device);
-        }
-        broadcastToClients('broker_status', getBrokerStatus());
+        updateBrokerStatus();
     });
 
     aedes.on('publish', (packet, client) => {
         if (!client || packet.topic.startsWith('$SYS')) return;
-        if (blockedDevices.has(client.id)) return;
 
         try {
             const payload = JSON.parse(packet.payload.toString());
@@ -84,7 +63,7 @@ function startBroker(port) {
             brokerConfig.port = targetPort;
             brokerConfig.running = true;
             console.log(`[MQTT Broker] Running on port ${targetPort}`);
-            broadcastToClients('broker_status', getBrokerStatus());
+            updateBrokerStatus();
             resolve();
         });
 
@@ -95,8 +74,4 @@ function startBroker(port) {
     });
 }
 
-function getAedesInstance() {
-    return aedes;
-}
-
-module.exports = { startBroker, getBrokerStatus, setupBrokerEvents, getAedesInstance };
+module.exports = { startBroker, setupBrokerEvents };
